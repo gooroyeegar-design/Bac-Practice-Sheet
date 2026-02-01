@@ -1,0 +1,25 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    text-align: right;
+    direction: rtl;
+}
+
+input {
+    width: 100%;
+    font-size: 18px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+button {
+    font-size: 16px;
+    padding: 10px 15px;
+    margin: 5px 0;
+    width: 48%;
+}
+
+#hint-text {
+    color: blue;
+    font-style: italic;
+}
