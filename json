@@ -1,0 +1,66 @@
+{
+  "rules": {
+    // By default, deny all read and write access to the entire database.
+    // This is the safest starting point, requiring explicit grants for access.
+    ".read": false,
+    ".write": false,
+
+    // Example: Allow authenticated users to read and write their own data
+    // stored under a "users" node, where the key is their UID.
+    "users": {
+      "$uid": {
+        // Only the authenticated user whose UID matches $uid can read their own data.
+        ".read": "auth != null && auth.uid === $uid",
+        // Only the authenticated user whose UID matches $uid can write to their own data.
+        // More specific validation can be added here for what they can write.
+        ".write": "auth != null && auth.uid === $uid",
+        // Example: Data validation for a "profile" child under the user's UID
+        "profile": {
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+          },
+          "email": {
+            // Basic email regex validation
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,4}$/i)"
+          },
+          "$other": { ".validate": false } // Deny any other fields in profile to prevent unexpected data
+        }
+      }
+    },
+
+    // Example: Publicly readable data (e.g., a list of products)
+    // but only authenticated users can create, update, or delete entries.
+    "products": {
+      ".read": true, // Anyone can read products
+      ".write": "auth != null", // Only authenticated users can write (create, update, delete) products
+      "$product_id": {
+        // Further validation for individual product entries to ensure data integrity
+        "name": { ".validate": "newData.isString() && newData.val().length > 0" },
+        "price": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        // Ensure new entries have 'name' and 'price' and that existing entries maintain a 'timestamp'
+        ".validate": "newData.hasChildren(['name', 'price']) && (!data.exists() || newData.hasChild('timestamp'))",
+        ".indexOn": ["name"] // Improve query performance when filtering by 'name'
+      }
+    },
+
+    // Example: A "publicData" node where anyone can read, but no one can write directly.
+    // Useful for announcements, configurations, or other static content.
+    "publicData": {
+      ".read": true,
+      ".write": false
+    },
+
+    // Example: A "chat" node where authenticated users can read and write messages.
+    "chat": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$message_id": {
+        // Validate chat message structure and ensure the sender's UID matches the authenticated user
+        ".validate": "newData.hasChildren(['uid', 'message', 'timestamp']) && newData.child('uid').val() === auth.uid",
+        "uid": { ".validate": "newData.isString()" },
+        "message": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 256" },
+        "timestamp": { ".validate": "newData.isNumber() && newData.val() <= now" }
+      }
+    }
+  }
+}
